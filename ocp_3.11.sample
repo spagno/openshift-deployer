@@ -8,7 +8,6 @@ nodes
 etcd
 glusterfs
 glusterfs_registry
-new_etcd
 infra
 lb
 
@@ -187,8 +186,6 @@ ocp-master3.example.com openshift_schedulable=true
 # host group for etcd
 [etcd]
 ocp-master1.example.com openshift_ip=192.168.7.10
-
-[new_etcd]
 ocp-master2.example.com openshift_ip=192.168.7.11
 ocp-master3.example.com openshift_ip=192.168.7.12
 
