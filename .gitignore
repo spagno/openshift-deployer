@@ -1,0 +1,4 @@
+id_rsa
+pki/*.cer
+pki/*.key
+Dockerfile

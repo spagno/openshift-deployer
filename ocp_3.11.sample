@@ -1,0 +1,228 @@
+# Create an OSEv3 group that contains the master, nodes, etcd, and lb groups.
+# The lb group lets Ansible configure HAProxy as the load balancing solution.
+# Comment lb out if your load balancer is pre-configured.
+
+[OSEv3:children]
+masters
+nodes
+etcd
+glusterfs
+glusterfs_registry
+new_etcd
+infra
+lb
+
+# Set variables common for all OSEv3 hosts
+[OSEv3:vars]
+ansible_ssh_user=root
+
+# https://github.com/openshift/openshift-ansible/blob/master/DEPLOYMENT_TYPES.md
+deployment_type=openshift-enterprise
+oreg_url=registry.redhat.io/openshift3/ose-${component}:${version}
+oreg_auth_user=<user>
+oreg_auth_password=<password>
+containerized=false
+
+# Skip env validation
+openshift_disable_check=disk_availability,docker_storage,memory_availability,docker_image_availability,package_version,docker_storage
+
+# Configure usage of openshift_clock role.
+openshift_clock_enabled=true
+
+# Set upgrade restart mode for full system restarts
+openshift_rolling_restart_mode=system
+
+# Enable cockpit
+osm_use_cockpit=false
+osm_cockpit_plugins=['cockpit-kubernetes', 'cockpit-pcp', 'setroubleshoot-server']
+
+# Docker / Registry Configuration
+container_runtime_docker_storage_type=overlay2
+docker_version="1.13.1"
+openshift_docker_options="--log-driver json-file --log-opt max-size=10M --log-opt max-file=1 --ipv6=false --log-level=warn"
+openshift_docker_disable_push_dockerhub=True
+openshift_docker_insecure_registries=docker-registry.default.svc,docker-registry.default.svc.cluster.local
+
+# Native high availbility cluster method with optional load balancer.
+# If no lb group is defined installer assumes that a load balancer has
+# been preconfigured. For installation the value of
+# openshift_master_cluster_hostname must resolve to the load balancer
+# or to one or all of the masters defined in the inventory if no load
+# balancer is present.
+openshift_master_cluster_method=native
+openshift_master_cluster_hostname=ocp.example.com
+openshift_master_cluster_public_hostname=ocp.example.com
+openshift_master_default_subdomain=apps.example.com
+openshift_master_api_port=8443
+openshift_master_console_port=8443
+
+# Configure the multi-tenant SDN plugin (default is 'redhat/openshift-ovs-subnet')
+os_sdn_network_plugin_name=redhat/openshift-ovs-multitenant
+
+# Configure SDN cluster network and kubernetes service CIDR blocks. These
+# network blocks should be private and should not conflict with network blocks
+# in your infrastructure that pods may require access to. Can not be changed
+# after deployment.
+osm_cluster_network_cidr=10.1.0.0/16
+openshift_portal_net=172.30.0.0/16
+osm_host_subnet_length=8
+
+#Proxy
+openshift_generate_no_proxy_hosts=true
+
+# Uncomment the following to enable htpasswd authentication; defaults to
+# DenyAllPasswordIdentityProvider.
+openshift_master_identity_providers=[{u'challenge': u'true', u'login': u'true', u'kind': u'HTPasswdPasswordIdentityProvider', u'name': u'htpasswd_auth'}]
+openshift_master_htpasswd_users={'spagno': '$apr1$CVej5Lr5$rIF0Pg389zveIX0lHEawz/'}
+
+# Custom Certs
+openshift_master_overwrite_named_certificates=true
+openshift_master_named_certificates=[{"certfile": "/opt/app-root/src/pki/server.cer", "keyfile": "/opt/app-root/src/pki/server.key", "names": ["ocp.example.com"], "cafile": "/opt/app-root/src/pki/ca.cer"}]
+openshift_hosted_router_certificate={"certfile": "/opt/app-root/src/pki/server_star.cer", "keyfile": "/opt/app-root/src/pki/server_star.key", "cafile": "/opt/app-root/src/pki/ca_star.cer"}
+
+# Openshift Registry Options
+openshift_hosted_registry_storage_kind=glusterfs
+openshift_hosted_registry_replicas=1
+
+# Setup cluster/pool OCS per App
+openshift_storage_glusterfs_namespace=ocs-app
+openshift_storage_glusterfs_storageclass=true
+openshift_storage_glusterfs_storageclass_default=false
+openshift_storage_glusterfs_block_deploy=true
+openshift_storage_glusterfs_block_host_vol_create=true
+openshift_storage_glusterfs_block_host_vol_size=25
+openshift_storage_glusterfs_block_storageclass=true
+openshift_storage_glusterfs_block_storageclass_default=false
+
+# Setup cluster/pool OCS per Infra 
+openshift_storage_glusterfs_registry_namespace=ocs-infra
+openshift_storage_glusterfs_registry_storageclass=false
+openshift_storage_glusterfs_registry_storageclass_default=false
+openshift_storage_glusterfs_registry_block_deploy=true
+openshift_storage_glusterfs_registry_block_host_vol_create=true
+openshift_storage_glusterfs_registry_block_host_vol_size=25
+openshift_storage_glusterfs_registry_block_storageclass=true
+openshift_storage_glusterfs_registry_block_storageclass_default=false
+
+# Metrics
+openshift_metrics_install_metrics=True
+openshift_metrics_cassandra_replicas=1
+openshift_metrics_cassandra_limits_memory=2Gi
+openshift_metrics_hawkular_replicas=1
+openshift_metrics_duration=5
+openshift_metrics_cassandra_pvc_size=5Gi
+openshift_metrics_cassandra_storage_type=dynamic
+openshift_metrics_cassandra_pvc_storage_class_name=glusterfs-registry-block
+
+# Logging deployment
+openshift_logging_install_logging=False
+openshift_logging_use_ops=false
+openshift_logging_public_master_url=https://ocp.example.com:8443
+openshift_logging_curator_default_days=7
+openshift_logging_es_pvc_size=10Gi
+openshift_logging_es_pvc_dynamic=true
+openshift_logging_es_pvc_storage_class_name=glusterfs-registry-block
+openshift_logging_es_memory_limit=8Gi
+
+# Prometheus
+openshift_cluster_monitoring_operator_install=True
+openshift_cluster_monitoring_operator_prometheus_storage_enabled=true
+openshift_cluster_monitoring_operator_alertmanager_storage_enabled=true
+openshift_cluster_monitoring_operator_prometheus_storage_capacity=5Gi
+openshift_cluster_monitoring_operator_node_selector={"node-role.kubernetes.io/infra":"true"}
+openshift_cluster_monitoring_operator_prometheus_storage_class_name=glusterfs-registry-block
+openshift_cluster_monitoring_operator_alertmanager_storage_class_name=glusterfs-registry-block
+
+
+# Service brokers
+
+#openshift_service_catalog_image_version=latest
+#ansible_service_broker_local_registry_whitelist=['.*-apb$']
+#openshift_template_service_broker_namespaces=['openshift']
+openshift_enable_service_catalog=False
+
+# Operator Lifecycle Manager
+# openshift_enable_olm=true
+# openshift_additional_registry_credentials=[{'host':'registry.connect.redhat.com','user':'your_user','password':'your_pwd','test_image':'mongodb/enterprise-operator:0.3.2'}]
+
+# Grafana
+openshift_grafana_storage_type=pvc
+openshift_grafana_sc_name=glusterfs-registry-block
+openshift_grafana_storage_volume_size=1Gi
+openshift_grafana_node_selector={"node-role.kubernetes.io/infra":"true"}
+
+openshift_metrics_cassandra_nodeselector={"region":"infra"}
+openshift_metrics_hawkular_nodeselector={"region":"infra"}
+openshift_metrics_heapster_nodeselector={"region":"infra"}
+
+# Node Groups
+openshift_node_groups=[{'name': 'node-config-master', 'labels': ['node-role.kubernetes.io/master=true','region=master']}, {'name': 'node-config-infra', 'labels': ['node-role.kubernetes.io/infra=true','region=infra']}, {'name': 'node-config-compute', 'labels': ['node-role.kubernetes.io/compute=true','region=primary']}, {'name': 'node-config-compute-infra', 'labels': ['node-role.kubernetes.io/infra=true','region=infra','node-role.kubernetes.io/compute=true','node=compute']} ]
+
+# Certificates expiration
+openshift_hosted_registry_cert_expire_days=730
+openshift_ca_cert_expire_days=1825
+openshift_node_cert_expire_days=730
+openshift_master_cert_expire_days=730
+etcd_ca_default_days=1825
+
+#LoadBalancer
+openshift_loadbalancer_frontends=[{"name":"atomic-openshift-api","mode":"tcp","options":["tcplog"],"binds":["*:8443"],"default_backend":"atomic-openshift-api"},{"name":"atomic-openshift-infra-http","mode":"tcp","options":["tcplog"],"binds":["*:80"],"default_backend":"atomic-openshift-infra-http"},{"name":"atomic-openshift-infra-https","mode":"tcp","options":["tcplog"],"binds":["*:443"],"default_backend":"atomic-openshift-infra-https"}]
+
+openshift_loadbalancer_backends=[{"name":"atomic-openshift-api","mode":"tcp","option":"tcplog","balance":"source","servers":[{"name":"ocp-master1.example.com","address":"192.168.7.10:8443","opts":"check"},{"name":"ocp-master2.example.com","address":"192.168.7.11:8443","opts":"check"},{"name":"ocp-master3.example.com","address":"192.168.7.12:8443","opts":"check"}]},{"name":"atomic-openshift-infra-http","mode":"tcp","option":"tcplog","balance":"roundrobin","servers":[{"name":"ocp-infra1.example.com","address":"192.168.7.20:80","opts":"check"},{"name":"ocp-infra2.example.com","address":"192.168.7.21:80","opts":"check"},{"name":"ocp-infra3.example.com","address":"192.168.7.22:80","opts":"check"}]},{"name":"atomic-openshift-infra-https","mode":"tcp","option":"tcplog","balance":"roundrobin","servers":[{"name":"ocp-infra1.example.com","address":"192.168.7.20:443","opts":"check"},{"name":"ocp-infra2.example.com","address":"192.168.7.21:443","opts":"check"},{"name":"ocp-infra3.example.com","address":"192.168.7.22:443","opts":"check"}]}]
+
+#openshift_loadbalancer_backends=[{"name":"atomic-openshift-api","mode":"tcp","option":"tcplog","balance":"source","servers":[{"name":"ocp-master1.example.com","address":"192.168.7.10:8443","opts":"check"}]},{"name":"atomic-openshift-infra-http","mode":"tcp","option":"tcplog","balance":"roundrobin","servers":[{"name":"ocp-infra1.example.com","address":"192.168.7.20:80","opts":"check"}]},{"name":"atomic-openshift-infra-https","mode":"tcp","option":"tcplog","balance":"roundrobin","servers":[{"name":"ocp-infra1.example.com","address":"192.168.7.20:443","opts":"check"}]}]
+
+r_openshift_loadbalancer_os_firewall_allow=[{"service":"haproxy stats","port":"9000/tcp"},{"service":"haproxy balance","port":"8443/tcp"},{"service":"haproxy infra http balance","port":"80/tcp"},{"service":"haproxy infra https balance","port":"443/tcp"}]
+
+# Console/SSN config
+#openshift_master_session_name=ssn
+#openshift_master_session_max_seconds=3600
+
+# host group for masters
+[masters]
+ocp-master1.example.com openshift_schedulable=true
+ocp-master2.example.com openshift_schedulable=true
+ocp-master3.example.com openshift_schedulable=true
+
+# host group for etcd
+[etcd]
+ocp-master1.example.com openshift_ip=192.168.7.10
+
+[new_etcd]
+ocp-master2.example.com openshift_ip=192.168.7.11
+ocp-master3.example.com openshift_ip=192.168.7.12
+
+
+[infra]
+ocp-infra1.example.com
+ocp-infra2.example.com
+ocp-infra3.example.com
+
+[lb]
+dike.example.com
+
+[glusterfs]
+ocp-gluster1.example.com openshift_ip=192.168.7.41 glusterfs_devices='[ "/dev/sdc", "/dev/sdd" ]'
+ocp-gluster2.example.com openshift_ip=192.168.7.42 glusterfs_devices='[ "/dev/sdc", "/dev/sdd" ]'
+ocp-gluster3.example.com openshift_ip=192.168.7.43 glusterfs_devices='[ "/dev/sdc", "/dev/sdd" ]'
+
+[glusterfs_registry]
+ocp-gluster4.example.com openshift_ip=192.168.7.44 glusterfs_devices='[ "/dev/sdc", "/dev/sdd" ]'
+ocp-gluster5.example.com openshift_ip=192.168.7.45 glusterfs_devices='[ "/dev/sdc", "/dev/sdd" ]'
+ocp-gluster6.example.com openshift_ip=192.168.7.46 glusterfs_devices='[ "/dev/sdc", "/dev/sdd" ]'
+
+# host group for nodes, includes region info
+[nodes]
+ocp-node1.example.com openshift_ip=192.168.7.30 openshift_node_group_name="node-config-compute"
+ocp-master1.example.com openshift_ip=192.168.7.10 openshift_node_group_name="node-config-master"
+ocp-master2.example.com openshift_ip=192.168.7.11 openshift_node_group_name="node-config-master"
+ocp-master3.example.com openshift_ip=192.168.7.12 openshift_node_group_name="node-config-master"
+ocp-infra1.example.com openshift_ip=192.168.7.20 openshift_node_group_name="node-config-infra"
+ocp-infra2.example.com openshift_ip=192.168.7.21 openshift_node_group_name="node-config-infra"
+ocp-infra3.example.com openshift_ip=192.168.7.22 openshift_node_group_name="node-config-infra"
+ocp-gluster1.example.com openshift_ip=192.168.7.41 openshift_node_group_name="node-config-compute"
+ocp-gluster2.example.com openshift_ip=192.168.7.42 openshift_node_group_name="node-config-compute"
+ocp-gluster3.example.com openshift_ip=192.168.7.43 openshift_node_group_name="node-config-compute"
+ocp-gluster4.example.com openshift_ip=192.168.7.44 openshift_node_group_name="node-config-compute"
+ocp-gluster5.example.com openshift_ip=192.168.7.45 openshift_node_group_name="node-config-compute"
+ocp-gluster6.example.com openshift_ip=192.168.7.46 openshift_node_group_name="node-config-compute"

@@ -1,0 +1,17 @@
+FROM registry.access.redhat.com/openshift3/ose-ansible:TAG_VERSION
+ARG version
+ENV ocp_version=$version
+COPY ocp_${ocp_version} /etc/ansible/hosts
+COPY pki /opt/app-root/src/pki
+COPY start.sh /usr/bin/start.sh
+USER root
+RUN mkdir -p /opt/app-root/src/.ssh
+COPY id_rsa /opt/app-root/src/.ssh/id_rsa
+COPY config /opt/app-root/src/.ssh/config
+COPY uninstall_openshift.yml /opt/app-root/src/uninstall_openshift.yml
+RUN chmod -R 700 /opt/app-root/src/.ssh \
+    && chmod 644 /opt/app-root/src/.ssh/config \
+    && chmod +x /usr/bin/start.sh \
+    && chown -R 1001 /opt/app-root/src
+USER 1001
+CMD start.sh
