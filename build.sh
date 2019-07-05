@@ -47,7 +47,17 @@ cat Dockerfile.template | sed -e "s/TAG_VERSION/$TAG_VERSION/g" > Dockerfile
 
 if [ ! -z ${TAG_BUILD} ]
 then
-  TAG_BUILD=":${TAG_BUILD}"
+  FINAL_TAG_BUILD=":${TAG_BUILD}"
 fi
 
-docker build --build-arg version=${TAG_VERSION:1} -t ${DOCKER_NAME}${TAG_BUILD} .
+if [ ${TAG_VERSION} != "latest" ]
+then
+  TAG_VERSION="${TAG_VERSION:1}"
+fi
+
+if [ ! -z ${TAG_VERSION} ]
+then
+  FINAL_TAG_VERSION=":${TAG_VERSION}"
+fi
+
+docker build --build-arg version=${TAG_BUILD} -t ${DOCKER_NAME}${FINAL_TAG_VERSION} .
