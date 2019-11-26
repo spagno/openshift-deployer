@@ -50,14 +50,11 @@ then
   FINAL_TAG_BUILD=":${TAG_BUILD}"
 fi
 
-if [ ${TAG_VERSION} != "latest" ]
-then
-  TAG_VERSION="${TAG_VERSION:1}"
-fi
-
 if [ ! -z ${TAG_VERSION} ]
 then
   FINAL_TAG_VERSION=":${TAG_VERSION}"
 fi
+
+docker pull registry.access.redhat.com/openshift3/ose-ansible${FINAL_TAG_VERSION}
 
 docker build --build-arg version=${TAG_BUILD} -t ${DOCKER_NAME}${FINAL_TAG_VERSION} .

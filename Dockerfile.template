@@ -1,7 +1,7 @@
 FROM registry.access.redhat.com/openshift3/ose-ansible:TAG_VERSION
 ARG version
 ENV ocp_version=$version
-COPY ocp_${ocp_version} /etc/ansible/hosts
+COPY ${ocp_version} /etc/ansible/hosts
 COPY pki /opt/app-root/src/pki
 COPY start.sh /usr/bin/start.sh
 USER root
